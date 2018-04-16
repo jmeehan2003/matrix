@@ -91,6 +91,7 @@ mean () {
 			columns=`expr $elements / $lines`
 		#	echo "lines: $lines"
 		#	echo "columns: $columns"
+		#https://askubuntu.com/questions/21556/how-to-create-an-empty-file-from-command-line
 			cat /dev/null > "tempAvg"
 			while [ $count -le $columns ]
 			do
@@ -138,6 +139,146 @@ mean () {
 		fi
 	fi
 }
+
+add () {
+		if [ $# -ne 2 ]; then
+			echo "There should be 2, and only 2, arguments" >&2 
+	 		return 1
+		else 
+			if [ -r $1 ]; then
+				if [ -r $2 ]; then
+					if [[ "$(./matrix dims $1)" == "$(./matrix dims $2)" ]]; then	
+						sum=0
+						count=1
+						elements=`wc -w $1 | cut -f1 -d' '`
+						lines=`wc -l $1 | cut -f1 -d' '`
+						columns=`expr $elements / $lines`
+						while
+							read line1 0<&3
+							read line2 0<&4
+						do
+							cat /dev/null > "addtest"	
+							echo "$line1" > "templine"
+							echo "$line2" >> "templine"
+							
+							#https://askubuntu.com/questions/21556/how-to-create-an-empty-file-from-command-line
+							while [ $count -le $columns ]
+							do
+								cut -f $count "templine" > "holder"
+								while read myLine
+								do
+									for i in $myLine
+									do
+										sum=`expr $sum + $i`
+									done
+																		
+								done < "holder"
+								echo "$sum" >> "addtest"	
+								
+								sum=0
+								count=`expr $count + 1`
+							done
+							count=1
+							cat "addtest" | tr '\n' '\t' > "holder"  
+							head --byte -1 "holder" >> "add$$"
+							echo -e "" >> "add$$"
+						done 3<$1 4<$2	
+						cat "add$$"
+					else
+						echo "The dimensions of the two matrices do not match" >&2
+						return 1
+					fi	
+				else
+					echo "File $2 is not readable" >&2
+					return 1
+				fi
+			else
+				echo "File $1 is not readable" >&2
+				return 1
+			fi
+							
+		fi 
+}
+
+multiply () {
+		if [ $# -ne 2 ]; then
+			echo "There should be 2, and only 2, arguments" >&2 
+	 		return 1
+		else 
+			if [ -r $1 ]; then
+				if [ -r $2 ]; then
+					elements=`wc -w $1 | cut -f1 -d' '`
+					lines=`wc -l $1 | cut -f1 -d' '`
+					columns1=`expr $elements / $lines`	
+					rows2=`wc -l $2 | cut -f1 -d' '`
+				#	echo "columns in matrix 1: $columns1" 
+				#	echo "rows in  matrix2: $rows2"
+					if [[ $columns1  == $rows2 ]]; then		
+						#get columns count for matrix 2		
+						elements2=`wc -w $2 | cut -f1 -d' '`
+						columns2=`expr $elements2 / $rows2`
+				#		echo "columns in matrix 2: $columns2"
+						
+						while
+							read line1
+							
+				#			read line2 0<&4
+						do
+						#	echo "line: $line1"
+							cat /dev/null > "multtest"
+							sum=0
+							product=1
+							count=1
+							# get columns count for matrix 2
+						
+							while [ $count -le $columns2 ]
+							do
+								tempCount=1
+								echo "$line1" > "templine"
+								cut -f $count $2 > "tempColFile"
+								cat "tempColFile" | tr '\n' '\t' >> "templine"
+
+								while [ $tempCount -le $columns1 ]
+								do
+									cut -f $tempCount "templine" > "holder"
+									while read myLine
+									do
+										for i in $myLine
+										do
+											product=`expr $product \* $i`
+										done	
+									done < "holder"
+									sum=`expr $sum + $product`
+									product=1
+									tempCount=`expr $tempCount + 1`
+								done
+							#	echo "sum: $sum  product: $product"
+								echo "$sum" >> "multtest"
+								sum=0
+								count=`expr $count + 1`
+							done
+							cat "multtest" | tr '\n' '\t' > "solutionFile"
+							head --byte -1 "solutionFile" >> "mult$$"
+							echo -e "" >> "mult$$"
+						done <$1 		
+						cat "mult$$"
+
+
+					else
+						echo "The dimensions of the matrices do not allow matrix multiplication" >&2
+						return 1
+					fi	
+				else
+					echo "File $2 is not readable" >&2
+					return 1
+				fi
+			else
+				echo "File $1 is not readable" >&2
+				return 1
+			fi
+							
+		fi 
+}			
 
 $1 "${@:2}"
 
